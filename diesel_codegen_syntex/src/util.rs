@@ -1,6 +1,6 @@
 use syntax::ast::TyKind;
 use syntax::ast;
-use syntax::attr::AttrMetaMethods;
+//use syntax::attr::AttrMetaMethods;
 use syntax::codemap::Span;
 use syntax::ext::base::ExtCtxt;
 use syntax::ext::build::AstBuilder;
@@ -39,7 +39,12 @@ fn single_arg_value_of_attr(
                 return usage_err();
             }
             match items[0].node {
-                ast::MetaItemKind::Word(ref value) => Some(str_to_ident(&value)),
+                ast::NestedMetaItemKind::MetaItem(ref nested_meta_item) => {
+                    match nested_meta_item.node {
+                        ast::MetaItemKind::Word(ref value) => Some(str_to_ident(&value)),
+                        _ => usage_err(),
+                    }
+                },
                 _ => usage_err(),
             }
         }

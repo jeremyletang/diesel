@@ -3,6 +3,7 @@ use syntax::ast::{
     Item,
     MetaItem,
     MetaItemKind,
+    NestedMetaItemKind,
 };
 use syntax::codemap::Span;
 use syntax::ext::base::{Annotatable, ExtCtxt};
@@ -33,7 +34,12 @@ pub fn expand_insert(
 fn insertable_tables(cx: &mut ExtCtxt, meta_item: &MetaItem) -> Vec<InternedString> {
     match meta_item.node {
         MetaItemKind::List(_, ref meta_items) => {
-            meta_items.iter().map(|i| table_name(cx, i)).collect()
+            meta_items.iter().map(|i|
+                                  match i.node {
+                                      NestedMetaItemKind::MetaItem(ref _i) => table_name(cx, _i),
+                                      _ => InternedString::new("yolo")
+                                  }
+            ).collect()
         }
         _ => usage_error(cx, meta_item),
     }

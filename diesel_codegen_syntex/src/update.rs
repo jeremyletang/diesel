@@ -1,5 +1,5 @@
-use syntax::ast::{self, MetaItem, MetaItemKind, TyKind};
-use syntax::attr::AttrMetaMethods;
+use syntax::ast::{self, MetaItem, MetaItemKind, NestedMetaItem, NestedMetaItemKind, TyKind};
+//use syntax::attr::AttrMetaMethods;
 use syntax::codemap::Span;
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
@@ -34,13 +34,18 @@ struct ChangesetOptions {
 fn changeset_options(cx: &mut ExtCtxt, meta_item: &MetaItem) -> Result<ChangesetOptions, ()> {
     match meta_item.node {
         MetaItemKind::List(_, ref meta_items) => {
-            let table_name = try!(table_name(cx, &meta_items[0]));
-            let treat_none_as_null = try!(boolean_option(cx, &meta_items[1..], "treat_none_as_null"))
-                .unwrap_or(false);
-            Ok(ChangesetOptions {
-                table_name: str_to_ident(&table_name),
-                treat_none_as_null: treat_none_as_null,
-            })
+            match meta_items[0].node {
+                NestedMetaItemKind::MetaItem(ref ni) => {
+                    let table_name = try!(table_name(cx, ni));
+                    let treat_none_as_null = try!(boolean_option(cx, &meta_items[1..], "treat_none_as_null"))
+                        .unwrap_or(false);
+                    Ok(ChangesetOptions {
+                        table_name: str_to_ident(&table_name),
+                        treat_none_as_null: treat_none_as_null,
+                    })
+                },
+                _ => usage_error(cx, meta_item)
+            }
         }
         _ => usage_error(cx, meta_item),
     }
@@ -53,17 +58,17 @@ fn table_name(cx: &mut ExtCtxt, meta_item: &MetaItem) -> Result<InternedString, 
     }
 }
 
-fn boolean_option(cx: &mut ExtCtxt, meta_items: &[P<MetaItem>], option_name: &str)
+fn boolean_option(cx: &mut ExtCtxt, meta_items: &[NestedMetaItem], option_name: &str)
     -> Result<Option<bool>, ()>
 {
-    if let Some(item) = meta_items.iter().find(|item| item.name() == option_name) {
+    if let Some(item) = meta_items.iter().find(|item| item.name().unwrap() == option_name) {
         match item.value_str() {
             Some(ref s) if *s == "true" => Ok(Some(true)),
             Some(ref s) if *s == "false" => Ok(Some(false)),
             _ => {
                 cx.span_err(item.span,
-                    &format!("Expected {} to be in the form `option=\"true\"` or \
-                            option=\"false\"", option_name));
+                            &format!("Expected {} to be in the form `option=\"true\"` or \
+                                      option=\"false\"", option_name));
                 Err(())
             }
         }

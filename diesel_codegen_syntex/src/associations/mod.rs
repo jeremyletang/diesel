@@ -1,5 +1,5 @@
-use syntax::ast::{self, MetaItem, MetaItemKind};
-use syntax::attr::AttrMetaMethods;
+use syntax::ast::{self, MetaItem, MetaItemKind, NestedMetaItemKind};
+//use syntax::attr::AttrMetaMethods;
 use syntax::codemap::Span;
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::parse::token::str_to_ident;
@@ -54,7 +54,12 @@ fn build_association_options(
     match meta_item.node {
         MetaItemKind::List(_, ref options) => {
             let association_name = match options[0].node {
-                MetaItemKind::Word(ref name) => str_to_ident(&name),
+                NestedMetaItemKind::MetaItem(ref nested_meta_item) => {
+                    match nested_meta_item.node {
+                        MetaItemKind::Word(ref name) => str_to_ident(&name),
+                        _ => return usage_err(),
+                    }
+                },
                 _ => return usage_err(),
             };
             let foreign_key_name = options.iter().find(|a| a.check_name("foreign_key"))
